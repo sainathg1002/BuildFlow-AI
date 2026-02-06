@@ -1,0 +1,77 @@
+<!-- Add some basic styling to the page -->
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
+header {
+  background-color: #f0f0f0;
+  padding: 10px;
+  text-align: center;
+}
+
+#keyword-section {
+  max-width: 800px;
+  margin: 40px auto;
+}
+
+#text-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+#find-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#find-btn:hover {
+  background-color: #3e8e41;
+}
+
+#keyword-result {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* Responsive design for smaller screens */
+@media only screen and (max-width: 600px) {
+  #keyword-section {
+    max-width: 90%;
+  }
+  #text-input {
+    font-size: 16px;
+  }
+}
+
+/* Modern appearance for the UI */
+header {
+  background-color: #333;
+  color: #fff;
+}
+
+#keyword-section {
+  background-color: #f7f7f7;
+  padding: 20px;
+}
+
+#text-input {
+  background-color: #f7f7f7;
+  border: 1px solid #ddd;
+}
+
+#find-btn {
+  background-color: #4CAF50;
+  color: #fff;
+}
+
+#keyword-result {
+  background-color: #f7f7f7;
+  padding: 20px;
+}

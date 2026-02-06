@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Stopwatch</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="stopwatch-container">
+        <div class="stopwatch-card">
+            <h1 class="title">NEON STOPWATCH</h1>
+            
+            <div class="display-container">
+                <div id="display" class="time-display" aria-live="polite" aria-label="Stopwatch time">
+                    00:00:00.000
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="startPauseBtn" class="btn btn-primary" aria-label="Start or pause stopwatch">
+                    <span class="btn-text">START</span>
+                </button>
+                <button id="lapBtn" class="btn btn-secondary" aria-label="Record lap time" disabled>
+                    <span class="btn-text">LAP</span>
+                </button>
+                <button id="resetBtn" class="btn btn-danger" aria-label="Reset stopwatch" disabled>
+                    <span class="btn-text">RESET</span>
+                </button>
+            </div>
+            
+            <div class="laps-container">
+                <h2 class="laps-title">LAP TIMES</h2>
+                <ul id="lapsList" class="laps-list" aria-label="Recorded lap times"></ul>
+            </div>
+        </div>
+        
+        <div class="shortcuts-info">
+            <p>Keyboard shortcuts: <kbd>Space</kbd> Start/Pause • <kbd>L</kbd> Lap • <kbd>R</kbd> Reset</p>
+        </div>
+    </main>
+    
+    <script src="script.js"></script>
+</body>
+</html>

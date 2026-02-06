@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Key Word Finder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Key Word Finder</h1>
+  </header>
+  <main>
+    <section id="keyword-section" aria-labelledby="keyword-heading">
+      <h2 id="keyword-heading">Key Word Finder</h2>
+      <label for="text-input">Input Text:</label>
+      <textarea id="text-input" placeholder="Enter text" aria-describedby="text-error"></textarea>
+      <div id="keyword-result" aria-live="polite"></div>
+      <p id="keyword-error" class="error" aria-live="assertive"></p>
+    </section>
+
+    <button id="find-btn" type="button">Find Keywords</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

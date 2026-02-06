@@ -1,0 +1,197 @@
+/* Neon Stopwatch Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: #000;
+    color: #00ff00;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.stopwatch-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.stopwatch-card {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ff00;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 20px #00ff00, inset 0 0 20px rgba(0, 255, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.title {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00;
+    animation: neon-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes neon-glow {
+    from {
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00;
+    }
+    to {
+        text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00;
+    }
+}
+
+.display-container {
+    margin: 30px 0;
+}
+
+.time-display {
+    font-size: 3em;
+    font-weight: bold;
+    text-shadow: 0 0 10px #00ff00;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #00ff00;
+    border-radius: 10px;
+    padding: 20px;
+    min-width: 300px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 12px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    min-width: 100px;
+}
+
+.btn-primary {
+    background: #00ff00;
+    color: #000;
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00;
+    transform: scale(1.05);
+}
+
+.btn-secondary {
+    background: #0080ff;
+    color: #fff;
+    box-shadow: 0 0 10px #0080ff;
+}
+
+.btn-secondary:hover {
+    box-shadow: 0 0 20px #0080ff, 0 0 30px #0080ff;
+    transform: scale(1.05);
+}
+
+.btn-danger {
+    background: #ff0040;
+    color: #fff;
+    box-shadow: 0 0 10px #ff0040;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 0 20px #ff0040, 0 0 30px #ff0040;
+    transform: scale(1.05);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn:disabled:hover {
+    box-shadow: none;
+}
+
+.laps-container {
+    margin-top: 20px;
+}
+
+.laps-title {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px #00ff00;
+}
+
+.laps-list {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.laps-list li {
+    background: rgba(0, 255, 0, 0.1);
+    border: 1px solid #00ff00;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    font-size: 1.1em;
+    text-shadow: 0 0 5px #00ff00;
+}
+
+.shortcuts-info {
+    margin-top: 20px;
+    font-size: 0.9em;
+    opacity: 0.8;
+    text-align: center;
+}
+
+.shortcuts-info kbd {
+    background: #333;
+    border: 1px solid #00ff00;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.8em;
+    box-shadow: 0 0 5px #00ff00;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .stopwatch-card {
+        padding: 20px;
+    }
+    
+    .title {
+        font-size: 2em;
+    }
+    
+    .time-display {
+        font-size: 2.5em;
+        min-width: 250px;
+    }
+    
+    .controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
