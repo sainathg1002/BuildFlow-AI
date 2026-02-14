@@ -1,0 +1,94 @@
+/*
+    style.css – Simple Stop Watch
+    Modern, responsive styling for the stopwatch web app.
+*/
+
+/* Reset some default browser styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html, body {
+    height: 100%;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.stopwatch {
+    background: #fff;
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+}
+
+.stopwatch h1 {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    font-variant-numeric: tabular-nums; /* keep digits aligned */
+    letter-spacing: 2px;
+    color: #222;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+button {
+    flex: 1 1 30%;
+    min-width: 80px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: #4a90e2;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+button:hover:not(:disabled) {
+    background: #357ab8;
+}
+
+button:active:not(:disabled) {
+    transform: translateY(2px);
+}
+
+button:disabled {
+    background: #a0a0a0;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Specific button colours (optional) */
+#startBtn { background: #28a745; }
+#startBtn:hover:not(:disabled) { background: #218838; }
+#stopBtn { background: #dc3545; }
+#stopBtn:hover:not(:disabled) { background: #c82333; }
+#resetBtn { background: #6c757d; }
+#resetBtn:hover:not(:disabled) { background: #5a6268; }
+
+/* Responsive tweaks */
+@media (max-width: 480px) {
+    .stopwatch h1 {
+        font-size: 2.5rem;
+    }
+    button {
+        font-size: 0.9rem;
+        padding: 0.6rem 0.8rem;
+    }
+}
