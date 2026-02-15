@@ -1,5 +1,10 @@
+pydantic
+fastapi
+uvicorn
+langchain-core
 langchain-groq
 langgraph
-langchain-core
+langgraph-prebuilt
+langgraph-checkpoint
 python-dotenv
-pydantic
+slowapi
