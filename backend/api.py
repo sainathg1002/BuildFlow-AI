@@ -32,7 +32,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later restrict to frontend domain
+    allow_origins=["https://build-flow-ekfmhqhcp-sainathg1002s-projects.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

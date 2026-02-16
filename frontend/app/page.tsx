@@ -3,8 +3,9 @@
 import { useState } from "react";
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://buildflow-ai.onrender.com";
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://buildflow-ai.onrender.com"
+).replace(/\/+$/, "");
 
 type GenerateResponse = {
   app_url?: string;
