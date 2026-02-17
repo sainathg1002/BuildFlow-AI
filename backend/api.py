@@ -18,9 +18,11 @@ from fastapi.middleware.cors import CORSMiddleware
 try:
     # Works when launched from project root: uvicorn backend.api:app
     from backend.Agent.graph import agent
+    from backend.Agent.graph import get_llm_status
 except ModuleNotFoundError:
     # Works when launched from backend folder: uvicorn api:app
     from Agent.graph import agent
+    from Agent.graph import get_llm_status
 
 
 app = FastAPI()
@@ -168,6 +170,16 @@ def generate_project(request: Request, req: AgentRequest):
     if cached:
         cached["cached"] = True
         return cached
+
+    llm_ready, model_name, llm_error = get_llm_status()
+    if not llm_ready:
+        return {
+            "error": (
+                f"LLM init failed for model '{model_name}'. "
+                "Set valid GROQ_API_KEY and confirm outbound network access from the backend host. "
+                f"Details: {llm_error}"
+            )
+        }
 
     timeout_seconds = int(os.getenv("GENERATION_TIMEOUT_SECONDS", "180"))
     request_started = time.time()

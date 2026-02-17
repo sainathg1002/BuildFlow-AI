@@ -13,19 +13,36 @@ from langgraph.graph import StateGraph
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if GROQ_API_KEY:
-    llm = ChatGroq(model="openai/gpt-oss-120b", api_key=GROQ_API_KEY)
-else:
-    llm = ChatGroq(model="openai/gpt-oss-120b")
-_MAX_CODER_WORKERS = max(1, int(os.getenv("CODER_MAX_WORKERS", "2")))
+MODEL_NAME = "openai/gpt-oss-120b"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+_MAX_CODER_WORKERS = max(1, int(os.getenv("CODER_MAX_WORKERS", "1")))
 _MAX_DEPENDENCY_CHARS = max(500, int(os.getenv("CODER_DEP_CONTEXT_CHARS", "3500")))
 _FILE_CONTENT_CACHE_MAX = max(10, int(os.getenv("FILE_CONTENT_CACHE_MAX", "200")))
 _FILE_CONTENT_CACHE: dict[str, str] = {}
 _FILE_CONTENT_CACHE_LOCK = Lock()
 _LLM_MAX_RETRIES = max(1, int(os.getenv("LLM_MAX_RETRIES", "3")))
 _LLM_RETRY_DELAY_SECONDS = max(1, int(os.getenv("LLM_RETRY_DELAY_SECONDS", "2")))
-_FALLBACK_BANNER = "Fallback build: generated without LLM response."
+_LLM_READY: bool = False
+_LLM_INIT_ERROR: str = ""
+
+if GROQ_API_KEY:
+    try:
+        llm = ChatGroq(
+            model=MODEL_NAME,
+            api_key=GROQ_API_KEY,
+            temperature=0.2,
+            request_timeout=60,
+            max_retries=0,
+        )
+        # Preflight call to fail fast if key/model/network are invalid on host.
+        llm.invoke([{"role": "user", "content": "Reply with OK"}])
+        _LLM_READY = True
+    except Exception as e:
+        llm = None
+        _LLM_INIT_ERROR = str(e)
+else:
+    llm = None
+    _LLM_INIT_ERROR = "GROQ_API_KEY is not set."
 
 try:
     from backend.Agent.prompts import coder_system_prompt
@@ -56,11 +73,7 @@ def _strip_code_fences(content: str) -> str:
 
 def _cache_get(key: str) -> str | None:
     with _FILE_CONTENT_CACHE_LOCK:
-        value = _FILE_CONTENT_CACHE.get(key)
-        if value and _FALLBACK_BANNER in value:
-            _FILE_CONTENT_CACHE.pop(key, None)
-            return None
-        return value
+        return _FILE_CONTENT_CACHE.get(key)
 
 
 def _cache_set(key: str, value: str) -> None:
@@ -101,6 +114,11 @@ def _read_dependency_context(dependencies: list[str]) -> str:
 
 
 def _invoke_llm_for_task(app_description: str, task: ImplementationTask) -> str:
+    if not _LLM_READY or llm is None:
+        raise RuntimeError(
+            f"LLM client is not ready for model '{MODEL_NAME}'. {_LLM_INIT_ERROR}"
+        )
+
     system_prompt = coder_system_prompt()
     dependency_context = _read_dependency_context(task.dependencies)
     user_prompt = (
@@ -118,6 +136,11 @@ def _invoke_llm_for_task(app_description: str, task: ImplementationTask) -> str:
         ]
     )
     return _strip_code_fences(response.content)
+
+
+def get_llm_status() -> tuple[bool, str, str]:
+    """Expose model readiness details for API pre-checks."""
+    return _LLM_READY, MODEL_NAME, _LLM_INIT_ERROR
 
 
 def _invoke_llm_with_retry(app_description: str, task: ImplementationTask) -> str:
