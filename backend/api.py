@@ -69,6 +69,12 @@ def rate_limit_handler(request, exc):
 def _build_project_response(project_folder: str):
     if not os.path.exists(project_folder):
         return None
+    if not os.path.isdir(project_folder):
+        return None
+
+    index_file = os.path.join(project_folder, "index.html")
+    if not os.path.exists(index_file):
+        return None
 
     zip_path = f"{project_folder}.zip"
     shutil.make_archive(project_folder.replace(".zip", ""), "zip", project_folder)
@@ -110,7 +116,8 @@ def _cache_get(key: str):
 
         response = item["response"]
         project_folder = response.get("project")
-        if project_folder and os.path.exists(project_folder):
+        index_file = os.path.join(project_folder, "index.html") if project_folder else None
+        if project_folder and os.path.exists(project_folder) and index_file and os.path.exists(index_file):
             return dict(response)
 
         _RESPONSE_CACHE.pop(key, None)
@@ -207,7 +214,7 @@ def generate_project(request: Request, req: AgentRequest):
 
         if not project_response:
             return {
-                "error": "Project folder not created. File generation may have failed.",
+                "error": "Runnable app was not created (missing index.html).",
                 "failed_files": failed_files,
             }
 
