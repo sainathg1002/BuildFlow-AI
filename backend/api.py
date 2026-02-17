@@ -213,8 +213,14 @@ def generate_project(request: Request, req: AgentRequest):
                 project_response = _build_project_response(latest_workspace)
 
         if not project_response:
+            base_error = "Runnable app was not created (missing index.html)."
+            if failed_files:
+                base_error = (
+                    "LLM/API generation failed for one or more files. "
+                    "Check GROQ_API_KEY, model access, and outbound network from the backend host."
+                )
             return {
-                "error": "Runnable app was not created (missing index.html).",
+                "error": base_error,
                 "failed_files": failed_files,
             }
 

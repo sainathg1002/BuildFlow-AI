@@ -4,6 +4,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from hashlib import sha256
+import time
 
 from dotenv import load_dotenv
 from langchain_groq.chat_models import ChatGroq
@@ -22,6 +23,9 @@ _MAX_DEPENDENCY_CHARS = max(500, int(os.getenv("CODER_DEP_CONTEXT_CHARS", "3500"
 _FILE_CONTENT_CACHE_MAX = max(10, int(os.getenv("FILE_CONTENT_CACHE_MAX", "200")))
 _FILE_CONTENT_CACHE: dict[str, str] = {}
 _FILE_CONTENT_CACHE_LOCK = Lock()
+_LLM_MAX_RETRIES = max(1, int(os.getenv("LLM_MAX_RETRIES", "3")))
+_LLM_RETRY_DELAY_SECONDS = max(1, int(os.getenv("LLM_RETRY_DELAY_SECONDS", "2")))
+_FALLBACK_BANNER = "Fallback build: generated without LLM response."
 
 try:
     from backend.Agent.prompts import coder_system_prompt
@@ -52,7 +56,11 @@ def _strip_code_fences(content: str) -> str:
 
 def _cache_get(key: str) -> str | None:
     with _FILE_CONTENT_CACHE_LOCK:
-        return _FILE_CONTENT_CACHE.get(key)
+        value = _FILE_CONTENT_CACHE.get(key)
+        if value and _FALLBACK_BANNER in value:
+            _FILE_CONTENT_CACHE.pop(key, None)
+            return None
+        return value
 
 
 def _cache_set(key: str, value: str) -> None:
@@ -112,124 +120,19 @@ def _invoke_llm_for_task(app_description: str, task: ImplementationTask) -> str:
     return _strip_code_fences(response.content)
 
 
-def _fallback_file_content(app_description: str, task: ImplementationTask) -> str:
-    filename = os.path.basename(task.filepath).lower()
-    title = app_description.replace("Web application based on:", "").strip() or "Generated App"
-
-    if filename == "index.html":
-        return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{title}</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="app">
-    <h1>{title}</h1>
-    <p class="subtitle">Fallback build: generated without LLM response.</p>
-    <section class="card">
-      <label for="itemInput">Item</label>
-      <div class="row">
-        <input id="itemInput" type="text" placeholder="Type something..." />
-        <button id="addBtn">Add</button>
-      </div>
-      <ul id="list"></ul>
-    </section>
-  </main>
-  <script src="script.js"></script>
-</body>
-</html>
-"""
-
-    if filename == "style.css":
-        return """* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(120deg, #eef5ff, #e8f8f1);
-  color: #172235;
-}
-.app {
-  max-width: 680px;
-  margin: 40px auto;
-  padding: 20px;
-}
-h1 { margin: 0 0 8px; }
-.subtitle { margin: 0 0 20px; color: #4b5f79; }
-.card {
-  background: #fff;
-  border: 1px solid #dbe6f3;
-  border-radius: 12px;
-  padding: 16px;
-}
-.row {
-  display: flex;
-  gap: 10px;
-  margin: 8px 0 12px;
-}
-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #c8d7ea;
-  border-radius: 8px;
-}
-button {
-  border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  background: #136a7a;
-  color: #fff;
-  cursor: pointer;
-}
-ul { margin: 0; padding-left: 18px; }
-li { margin: 6px 0; }
-"""
-
-    return """(function () {
-  const input = document.getElementById('itemInput');
-  const addBtn = document.getElementById('addBtn');
-  const list = document.getElementById('list');
-
-  if (!input || !addBtn || !list) return;
-
-  const KEY = 'buildflow_fallback_items';
-  const items = JSON.parse(localStorage.getItem(KEY) || '[]');
-
-  function render() {
-    list.innerHTML = '';
-    items.forEach((text, idx) => {
-      const li = document.createElement('li');
-      const span = document.createElement('span');
-      span.textContent = text;
-
-      const del = document.createElement('button');
-      del.textContent = 'Delete';
-      del.style.marginLeft = '8px';
-      del.addEventListener('click', () => {
-        items.splice(idx, 1);
-        localStorage.setItem(KEY, JSON.stringify(items));
-        render();
-      });
-
-      li.appendChild(span);
-      li.appendChild(del);
-      list.appendChild(li);
-    });
-  }
-
-  addBtn.addEventListener('click', () => {
-    const value = input.value.trim();
-    if (!value) return;
-    items.push(value);
-    input.value = '';
-    localStorage.setItem(KEY, JSON.stringify(items));
-    render();
-  });
-
-  render();
-})();"""
+def _invoke_llm_with_retry(app_description: str, task: ImplementationTask) -> str:
+    last_error: Exception | None = None
+    for attempt in range(1, _LLM_MAX_RETRIES + 1):
+        try:
+            content = _invoke_llm_for_task(app_description, task)
+            if content.strip():
+                return content
+            raise RuntimeError("LLM returned empty content.")
+        except Exception as e:
+            last_error = e
+            if attempt < _LLM_MAX_RETRIES:
+                time.sleep(_LLM_RETRY_DELAY_SECONDS)
+    raise RuntimeError(f"LLM generation failed for {task.filepath}: {last_error}")
 
 
 def _generate_and_write_file(app_description: str, task: ImplementationTask) -> tuple[str, bool]:
@@ -238,12 +141,7 @@ def _generate_and_write_file(app_description: str, task: ImplementationTask) -> 
     file_content = cached
 
     if file_content is None:
-        try:
-            file_content = _invoke_llm_for_task(app_description, task)
-        except Exception:
-            file_content = _fallback_file_content(app_description, task)
-        if not file_content.strip():
-            file_content = _fallback_file_content(app_description, task)
+        file_content = _invoke_llm_with_retry(app_description, task)
         _cache_set(cache_key, file_content)
 
     write_result = write_file.invoke({"path": task.filepath, "content": file_content})
