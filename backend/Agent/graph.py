@@ -1,6 +1,9 @@
 import os
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+from hashlib import sha256
 
 from dotenv import load_dotenv
 from langchain_groq.chat_models import ChatGroq
@@ -14,6 +17,11 @@ if GROQ_API_KEY:
     llm = ChatGroq(model="openai/gpt-oss-120b", api_key=GROQ_API_KEY)
 else:
     llm = ChatGroq(model="openai/gpt-oss-120b")
+_MAX_CODER_WORKERS = max(1, int(os.getenv("CODER_MAX_WORKERS", "2")))
+_MAX_DEPENDENCY_CHARS = max(500, int(os.getenv("CODER_DEP_CONTEXT_CHARS", "3500")))
+_FILE_CONTENT_CACHE_MAX = max(10, int(os.getenv("FILE_CONTENT_CACHE_MAX", "200")))
+_FILE_CONTENT_CACHE: dict[str, str] = {}
+_FILE_CONTENT_CACHE_LOCK = Lock()
 
 try:
     from backend.Agent.prompts import coder_system_prompt
@@ -40,6 +48,82 @@ def _strip_code_fences(content: str) -> str:
         if len(lines) >= 3:
             return "\n".join(lines[1:-1]).strip()
     return text
+
+
+def _cache_get(key: str) -> str | None:
+    with _FILE_CONTENT_CACHE_LOCK:
+        return _FILE_CONTENT_CACHE.get(key)
+
+
+def _cache_set(key: str, value: str) -> None:
+    with _FILE_CONTENT_CACHE_LOCK:
+        if len(_FILE_CONTENT_CACHE) >= _FILE_CONTENT_CACHE_MAX:
+            oldest_key = next(iter(_FILE_CONTENT_CACHE))
+            _FILE_CONTENT_CACHE.pop(oldest_key, None)
+        _FILE_CONTENT_CACHE[key] = value
+
+
+def _file_cache_key(app_description: str, filepath: str, task_description: str) -> str:
+    signature = "|".join(
+        [
+            app_description.strip().lower(),
+            os.path.basename(filepath).lower(),
+            task_description.strip().lower(),
+        ]
+    )
+    return sha256(signature.encode("utf-8")).hexdigest()
+
+
+def _read_dependency_context(dependencies: list[str]) -> str:
+    chunks: list[str] = []
+    total = 0
+    for dep in dependencies:
+        if file_exists.invoke({"path": dep}) != "true":
+            continue
+        content = read_file.invoke({"path": dep})
+        if content.startswith("Error reading file:"):
+            continue
+        remaining = _MAX_DEPENDENCY_CHARS - total
+        if remaining <= 0:
+            break
+        snippet = content[:remaining]
+        chunks.append(f"\n[{os.path.basename(dep)}]\n{snippet}")
+        total += len(snippet)
+    return "".join(chunks)
+
+
+def _invoke_llm_for_task(app_description: str, task: ImplementationTask) -> str:
+    system_prompt = coder_system_prompt()
+    dependency_context = _read_dependency_context(task.dependencies)
+    user_prompt = (
+        f"App goal: {app_description}\n"
+        f"Target file: {task.filepath}\n"
+        f"Task: {task.task_description}\n"
+        "If dependencies are provided, keep naming and IDs consistent.\n"
+        f"Dependency context:{dependency_context}\n"
+        "Output only the complete file content."
+    )
+    response = llm.invoke(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+    )
+    return _strip_code_fences(response.content)
+
+
+def _generate_and_write_file(app_description: str, task: ImplementationTask) -> tuple[str, bool]:
+    cache_key = _file_cache_key(app_description, task.filepath, task.task_description)
+    cached = _cache_get(cache_key)
+    file_content = cached
+
+    if file_content is None:
+        file_content = _invoke_llm_for_task(app_description, task)
+        _cache_set(cache_key, file_content)
+
+    write_result = write_file.invoke({"path": task.filepath, "content": file_content})
+    ok = write_result.startswith("Successfully wrote") and file_exists.invoke({"path": task.filepath}) == "true"
+    return task.filepath, ok
 
 
 def planner_agent(state: dict) -> dict:
@@ -81,12 +165,12 @@ def architect_agent(state: dict) -> dict:
         ImplementationTask(
             filepath=f"{project_folder}/style.css",
             task_description="Create complete CSS styling with responsive layout and clear visual hierarchy.",
-            dependencies=[f"{project_folder}/index.html"],
+            dependencies=[],
         ),
         ImplementationTask(
             filepath=f"{project_folder}/script.js",
             task_description="Create complete JavaScript functionality based on the requested app behavior.",
-            dependencies=[f"{project_folder}/index.html", f"{project_folder}/style.css"],
+            dependencies=[f"{project_folder}/index.html"],
         ),
     ]
 
@@ -98,56 +182,68 @@ def architect_agent(state: dict) -> dict:
 
 
 def coder_agent(state: dict) -> dict:
-    """Coder creates each file with one direct LLM call and writes it immediately."""
+    """Coder batches work to reduce recursion and parallelizes independent file generation."""
     coder_state: CoderState = state.get("coder_state")
     if coder_state is None:
         coder_state = CoderState(task_plan=state["task_plan"], current_step_idx=0)
 
     steps = coder_state.task_plan.implementation_steps
-    if coder_state.current_step_idx >= len(steps):
+    start_idx = coder_state.current_step_idx
+    if start_idx >= len(steps):
         print(f"Completed all {len(steps)} tasks")
         return {"coder_state": coder_state, "status": "DONE"}
 
-    current_task = steps[coder_state.current_step_idx]
-    print(f"Working on: {current_task.filepath}")
+    app_description = coder_state.task_plan.plan.description
 
-    dependency_contents = ""
-    for dep in current_task.dependencies:
-        if file_exists.invoke({"path": dep}) == "true":
-            content = read_file.invoke({"path": dep})
-            dependency_contents += f"\n--- Content of {dep} ---\n{content}\n"
-
-    system_prompt = coder_system_prompt()
-    user_prompt = (
-        f"Build this app: {coder_state.task_plan.plan.description}\n"
-        f"Now create file: {current_task.filepath}\n"
-        f"Task: {current_task.task_description}\n"
-        f"Dependencies:\n{dependency_contents}\n"
-        "Return ONLY the full file content. No markdown fences, no explanations."
-    )
-
-    try:
-        response = llm.invoke(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ]
-        )
-        file_content = _strip_code_fences(response.content)
-        write_result = write_file.invoke({"path": current_task.filepath, "content": file_content})
-
-        if write_result.startswith("Successfully wrote") and file_exists.invoke({"path": current_task.filepath}) == "true":
-            coder_state.created_files.append(current_task.filepath)
-            print(f"Successfully created {current_task.filepath}")
-        else:
+    # Phase 1: dependency root file(s) serially (currently index.html).
+    for current_task in steps[start_idx:]:
+        if current_task.dependencies:
+            continue
+        if os.path.basename(current_task.filepath).lower() != "index.html":
+            continue
+        print(f"Working on base file: {current_task.filepath}")
+        try:
+            filepath, ok = _generate_and_write_file(app_description, current_task)
+            if ok:
+                coder_state.created_files.append(filepath)
+                print(f"Successfully created {filepath}")
+            else:
+                coder_state.failed_files.append(filepath)
+                print(f"Failed to create {filepath}")
+        except Exception as e:
             coder_state.failed_files.append(current_task.filepath)
-            print(f"Failed to create {current_task.filepath}: {write_result}")
-    except Exception as e:
-        coder_state.failed_files.append(current_task.filepath)
-        print(f"Error creating {current_task.filepath}: {e}")
+            print(f"Error creating {current_task.filepath}: {e}")
 
-    coder_state.current_step_idx += 1
-    return {"coder_state": coder_state}
+    # Phase 2: generate remaining files in parallel when possible.
+    pending_tasks = [
+        task
+        for task in steps[start_idx:]
+        if task.filepath not in coder_state.created_files and task.filepath not in coder_state.failed_files
+    ]
+    if pending_tasks:
+        worker_count = min(_MAX_CODER_WORKERS, len(pending_tasks))
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = {
+                executor.submit(_generate_and_write_file, app_description, task): task
+                for task in pending_tasks
+            }
+            for future in as_completed(futures):
+                task = futures[future]
+                try:
+                    filepath, ok = future.result()
+                    if ok:
+                        coder_state.created_files.append(filepath)
+                        print(f"Successfully created {filepath}")
+                    else:
+                        coder_state.failed_files.append(filepath)
+                        print(f"Failed to create {filepath}")
+                except Exception as e:
+                    coder_state.failed_files.append(task.filepath)
+                    print(f"Error creating {task.filepath}: {e}")
+
+    coder_state.current_step_idx = len(steps)
+    print(f"Completed all {len(steps)} tasks")
+    return {"coder_state": coder_state, "status": "DONE"}
 
 
 # Build the graph

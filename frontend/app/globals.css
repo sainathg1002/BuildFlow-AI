@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eaf3ff;
+  --foreground: #122034;
 }
 
 @theme inline {
@@ -14,13 +14,56 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #eaf3ff;
+    --foreground: #122034;
   }
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255, 255, 255, 0.95), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(181, 227, 255, 0.6), transparent 40%),
+    linear-gradient(135deg, #eef5ff 0%, #dff7f1 45%, #f8f1e8 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.app-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  inset: auto -180px -220px auto;
+  width: 450px;
+  height: 450px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(17, 150, 166, 0.2) 0%, rgba(17, 150, 166, 0) 70%);
+  pointer-events: none;
+}
+
+.fade-in-up {
+  animation: fadeUp 0.55s ease-out both;
+}
+
+.fade-in-up-delayed {
+  animation: fadeUp 0.72s ease-out both;
+}
+
+.fade-in-up-late {
+  animation: fadeUp 0.88s ease-out both;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
