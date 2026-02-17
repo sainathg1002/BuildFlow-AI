@@ -64,7 +64,15 @@ export default function Home() {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const apiError = err.response?.data?.detail ?? err.response?.data?.error;
-        setError(apiError || "Failed to generate project.");
+        if (apiError) {
+          setError(String(apiError));
+        } else if (!err.response) {
+          setError(
+            "Cannot reach backend API. Check Render service status, CORS, and NEXT_PUBLIC_API_BASE_URL."
+          );
+        } else {
+          setError(`Failed to generate project (HTTP ${err.response.status}).`);
+        }
       } else {
         setError("Failed to generate project.");
       }
