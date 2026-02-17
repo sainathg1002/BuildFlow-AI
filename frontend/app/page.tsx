@@ -68,7 +68,7 @@ export default function Home() {
           setError(String(apiError));
         } else if (!err.response) {
           setError(
-            "Cannot reach backend API. Check Render service status, CORS, and NEXT_PUBLIC_API_BASE_URL."
+            `Cannot reach backend API (${API_BASE_URL}). Check Render service status, CORS, and NEXT_PUBLIC_API_BASE_URL.`
           );
         } else {
           setError(`Failed to generate project (HTTP ${err.response.status}).`);

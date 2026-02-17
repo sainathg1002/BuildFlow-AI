@@ -22,11 +22,19 @@ except ModuleNotFoundError:
 
 
 app = FastAPI()
+
+
+def _parse_cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
+    origins = [item.strip() for item in raw.split(",") if item.strip()]
+    defaults = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    return list(dict.fromkeys(defaults + origins))
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://build-flow-p2cmdfclc-sainathg1002s-projects.vercel.app"
-    ],
+    allow_origins=_parse_cors_origins(),
+    allow_origin_regex=os.getenv("CORS_ALLOW_ORIGIN_REGEX", r"https://.*\.vercel\.app"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
