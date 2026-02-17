@@ -42,7 +42,7 @@ export default function Home() {
         `${API_BASE_URL}/generate`,
         {
           prompt,
-          recursion_limit: 12,
+          recursion_limit: 30,
         }
       );
 
