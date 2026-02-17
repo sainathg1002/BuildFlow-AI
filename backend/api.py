@@ -184,11 +184,36 @@ def generate_project(request: Request, req: AgentRequest):
 
         if not plan or not getattr(plan, "files", None):
             return {"error": "Failed to generate project"}
-        
-        project_folder = os.path.dirname(plan.files[0].path)
-        project_response = _build_project_response(project_folder)
+
+        coder_state = result.get("coder_state")
+        created_files = getattr(coder_state, "created_files", []) if coder_state else []
+        failed_files = getattr(coder_state, "failed_files", []) if coder_state else []
+
+        project_candidates = []
+        project_candidates.append(os.path.dirname(plan.files[0].path))
+        if created_files:
+            project_candidates.append(os.path.dirname(created_files[0]))
+
+        project_response = None
+        for project_folder in project_candidates:
+            project_response = _build_project_response(project_folder)
+            if project_response:
+                break
+
         if not project_response:
-            return {"error": "Project folder not created"}
+            latest_workspace = _find_latest_workspace(request_started)
+            if latest_workspace:
+                project_response = _build_project_response(latest_workspace)
+
+        if not project_response:
+            return {
+                "error": "Project folder not created. File generation may have failed.",
+                "failed_files": failed_files,
+            }
+
+        if failed_files:
+            project_response["warning"] = "Some files failed during generation."
+            project_response["failed_files"] = failed_files
 
         _cache_set(key, project_response)
         return project_response

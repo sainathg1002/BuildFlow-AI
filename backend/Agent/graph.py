@@ -134,6 +134,7 @@ def planner_agent(state: dict) -> dict:
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspaces"))
     unique_id = str(uuid.uuid4())[:8]
     project_folder = os.path.join(base_dir, f"{project_name}-{unique_id}").replace("\\", "/")
+    os.makedirs(project_folder, exist_ok=True)
 
     plan = Plan(
         name=project_name,
