@@ -55,7 +55,7 @@ def read_root():
 
 class AgentRequest(BaseModel):
     prompt: str
-    recursion_limit: int = 12
+    recursion_limit: int = 20
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
