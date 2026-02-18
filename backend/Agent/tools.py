@@ -5,9 +5,16 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "worksp
 
 def safe_path(path: str):
     """Ensure path is within workspace directory."""
-    full_path = os.path.abspath(path)
+    clean = (path or "").strip()
+    if not clean:
+        raise ValueError("Path cannot be empty")
 
-    if not full_path.startswith(BASE_DIR):
+    if os.path.isabs(clean):
+        full_path = os.path.abspath(clean)
+    else:
+        full_path = os.path.abspath(os.path.join(BASE_DIR, clean))
+
+    if os.path.commonpath([full_path, BASE_DIR]) != BASE_DIR:
         raise ValueError("Access outside workspace not allowed")
 
     return full_path
