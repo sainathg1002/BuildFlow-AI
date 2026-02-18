@@ -24,7 +24,7 @@ _ = load_dotenv()
 set_debug(False)
 set_verbose(False)
 
-MODEL_NAME = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+MODEL_NAME = os.getenv("GROQ_MODEL", "gpt-oss-120b")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 _LLM_INIT_ERROR = ""
 
