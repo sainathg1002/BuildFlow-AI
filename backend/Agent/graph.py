@@ -9,11 +9,11 @@ from langgraph.graph import StateGraph
 try:
     from backend.Agent.prompts import architect_prompt, coder_system_prompt, planner_prompt
     from backend.Agent.states import CoderState, Plan, TaskPlan
-    from backend.Agent.tools import write_file
+    from backend.Agent.tools import safe_path, write_file
 except ModuleNotFoundError:
     from Agent.prompts import architect_prompt, coder_system_prompt, planner_prompt
     from Agent.states import CoderState, Plan, TaskPlan
-    from Agent.tools import write_file
+    from Agent.tools import safe_path, write_file
 
 
 # ---------------------------------------------------
@@ -62,7 +62,12 @@ def _validate_index_exists(steps):
     if not steps:
         raise RuntimeError("No implementation steps generated.")
 
-    project_folder = os.path.dirname(steps[0].filepath)
+    first_path = steps[0].filepath
+
+    # Convert to workspace absolute path
+    full_path = safe_path(first_path)
+
+    project_folder = os.path.dirname(full_path)
     index_path = os.path.join(project_folder, "index.html")
 
     if not os.path.exists(index_path):
