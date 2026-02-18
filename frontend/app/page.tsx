@@ -174,7 +174,7 @@ export default function Home() {
         </section>
 
         <div className="fade-in-up-late mt-10 text-center text-sm font-medium text-[#455a74]">
-          User Prompt -&gt; AI Multi-Agent System -&gt; Generated Web App -&gt; Preview &amp; Download
+          User Prompt -&gt; AI Multi-Agent System -&gt; Generated Web App -&gt; Preview ;
         </div>
       </div>
     </main>
