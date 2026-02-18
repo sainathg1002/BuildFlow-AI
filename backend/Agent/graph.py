@@ -47,6 +47,37 @@ def get_llm_status() -> tuple[bool, str, str]:
     return llm is not None, MODEL_NAME, _LLM_INIT_ERROR
 
 
+def _prefix_task_filepaths(task_plan: TaskPlan, base_folder: str) -> TaskPlan:
+    """Ensure architect tasks point to project-scoped file paths."""
+    if not base_folder:
+        return task_plan
+
+    normalized_base = os.path.normpath(base_folder)
+
+    def _normalize_path(path: str) -> str:
+        clean = path.strip()
+        if not clean:
+            return clean
+        if os.path.isabs(clean):
+            return os.path.normpath(clean).replace("\\", "/")
+        prefixed = os.path.join(normalized_base, clean)
+        return os.path.normpath(prefixed).replace("\\", "/")
+
+    for step in task_plan.implementation_steps:
+        step.filepath = _normalize_path(step.filepath)
+        step.dependencies = [_normalize_path(dep) for dep in step.dependencies]
+
+    return task_plan
+
+
+def _validate_runnable_output(steps) -> None:
+    if not steps:
+        raise RuntimeError("No implementation steps found.")
+    project_folder = os.path.dirname(steps[0].filepath)
+    if not os.path.exists(os.path.join(project_folder, "index.html")):
+        raise RuntimeError("Runnable app was not created (missing index.html).")
+
+
 def planner_agent(state: dict) -> dict:
     """Converts user prompt into a structured Plan."""
     user_prompt = state["user_prompt"]
@@ -67,6 +98,10 @@ def architect_agent(state: dict) -> dict:
     if resp is None:
         raise ValueError("Architect did not return a valid response.")
 
+    plan_dirs = [os.path.dirname(file.path) for file in plan.files if os.path.dirname(file.path)]
+    base_folder = plan_dirs[0] if plan_dirs else ""
+    resp = _prefix_task_filepaths(resp, base_folder)
+
     resp.plan = plan
     print(resp.model_dump_json())
     return {"task_plan": resp}
@@ -80,6 +115,7 @@ def coder_agent(state: dict) -> dict:
     steps = coder_state.task_plan.implementation_steps
 
     if coder_state.current_step_idx >= len(steps):
+        _validate_runnable_output(steps)
         return {"coder_state": coder_state, "status": "DONE"}
 
     current_task = steps[coder_state.current_step_idx]
@@ -103,10 +139,13 @@ No explanation.
         ]
     )
 
+    print("Writing file:", current_task.filepath)
     write_file.invoke({"path": current_task.filepath, "content": response.content})
 
     coder_state.current_step_idx += 1
     status = "DONE" if coder_state.current_step_idx >= len(steps) else "RUNNING"
+    if status == "DONE":
+        _validate_runnable_output(steps)
 
     return {"coder_state": coder_state, "status": status}
 
