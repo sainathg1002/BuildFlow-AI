@@ -120,34 +120,16 @@ def _normalize_task_filepaths(task_plan: TaskPlan, plan: Plan) -> TaskPlan:
 
 def planner_agent(state: dict) -> dict:
     user_prompt = state["user_prompt"]
+    project_id = state.get("project_id", "")
 
-    response = _require_llm().invoke(
-        f"""
-You are the PLANNER agent.
-
-Return ONLY valid JSON matching:
-
-{{
-  "name": "string",
-  "description": "string",
-  "techstack": "html, css, javascript",
-  "features": ["string"],
-  "files": [
-    {{"path": "project/index.html", "purpose": "Main HTML file"}},
-    {{"path": "project/style.css", "purpose": "Styling"}},
-    {{"path": "project/script.js", "purpose": "JS logic"}}
-  ]
-}}
-
-User Request:
-{user_prompt}
-
-Return JSON only. No explanation.
-"""
-    )
+    response = _require_llm().invoke(planner_prompt(user_prompt))
 
     data = json.loads(_clean_json(response.content))
     plan = Plan(**data)
+
+    if project_id:
+        for file in plan.files:
+            file.path = os.path.join(project_id, file.path)
 
     return {"plan": plan}
 
@@ -159,33 +141,7 @@ Return JSON only. No explanation.
 def architect_agent(state: dict) -> dict:
     plan: Plan = state["plan"]
 
-    response = _require_llm().invoke(
-        f"""
-You are the ARCHITECT agent.
-
-Create implementation tasks for EXACTLY these files:
-- index.html
-- style.css
-- script.js
-
-Return ONLY JSON:
-
-{{
-  "implementation_steps": [
-    {{
-      "filepath": "string",
-      "task_description": "string",
-      "dependencies": []
-    }}
-  ]
-}}
-
-Project Plan:
-{plan.model_dump_json()}
-
-Return JSON only.
-"""
-    )
+    response = _require_llm().invoke(architect_prompt(plan))
 
     data = json.loads(_clean_json(response.content))
     task_plan = TaskPlan(**data)
@@ -216,21 +172,32 @@ def coder_agent(state: dict) -> dict:
 
     current_task = steps[coder_state.current_step_idx]
 
+    # Read dependency contents if any
+    dep_contents = {}
+    for dep in current_task.dependencies:
+        dep_full_path = safe_path(dep)
+        if os.path.exists(dep_full_path):
+            with open(dep_full_path, 'r', encoding='utf-8') as f:
+                dep_contents[dep] = f.read()
+
     system_prompt = coder_system_prompt()
+
+    user_content = f"""
+Project Plan: {coder_state.task_plan.plan.model_dump_json()}
+
+Task: {current_task.task_description}
+"""
+
+    if dep_contents:
+        user_content += "\nDependency files:\n"
+        for path, cont in dep_contents.items():
+            user_content += f"\n--- {path} ---\n{cont}\n"
+
+    user_content += f"\nReturn ONLY the full file content for {current_task.filepath}. No markdown. No explanation."
 
     response = _require_llm().invoke([
         {"role": "system", "content": system_prompt},
-        {
-            "role": "user",
-            "content": f"""
-Task:
-{current_task.task_description}
-
-Return ONLY full file content.
-No markdown.
-No explanation.
-"""
-        }
+        {"role": "user", "content": user_content}
     ])
 
     content = response.content.strip()
@@ -283,8 +250,10 @@ agent = graph.compile()
 # ---------------------------------------------------
 
 if __name__ == "__main__":
+    import uuid
+    test_project_id = "test_" + uuid.uuid4().hex[:8]
     result = agent.invoke(
-        {"user_prompt": "Build a colourful modern todo app in html css and js"},
+        {"user_prompt": "Build a colourful modern todo app in html css and js", "project_id": test_project_id},
         {"recursion_limit": 15},
     )
     print("Final State:", result)

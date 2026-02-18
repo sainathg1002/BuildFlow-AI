@@ -1,0 +1,386 @@
+/* -------------------------------------------------
+   2026 Calendar Web App – style.css
+   ------------------------------------------------- */
+
+/* ==== Theme Variables ==== */
+:root {
+    /* Primary & Accent */
+    --color-primary: #2563eb;
+    --color-primary-hover: #1e4bb8;
+    --color-primary-active: #173c90;
+
+    /* Light Theme */
+    --bg-page: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-overlay: rgba(0, 0, 0, 0.4);
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --border-color: #e5e7eb;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --event-bg: #e0f2fe;
+    --event-hover-bg: #bae6fd;
+    --holiday-bg: #fef3c7;
+    --holiday-text: #92400e;
+    --transition-duration: 0.3s;
+}
+
+/* Dark Theme overrides */
+[data-theme="dark"] {
+    --bg-page: #1f2937;
+    --bg-surface: #111827;
+    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --border-color: #374151;
+    --event-bg: #1e3a8a;
+    --event-hover-bg: #1d4ed8;
+    --holiday-bg: #92400e;
+    --holiday-text: #fffbeb;
+}
+
+/* ==== Global Reset & Typography ==== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--bg-page);
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==== Layout ==== */
+header,
+footer,
+nav,
+main {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ==== Header ==== */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0 0 12px 12px;
+    transition: background-color var(--transition-duration) ease;
+}
+
+.app-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: color var(--transition-duration) ease;
+}
+.theme-toggle:hover {
+    color: var(--color-primary);
+}
+
+/* ==== Toolbar ==== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-duration) ease;
+}
+
+/* View controls */
+.view-controls,
+.nav-arrows {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.view-btn,
+.nav-btn {
+    background: var(--bg-page);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color var(--transition-duration) ease, border-color var(--transition-duration) ease;
+}
+.view-btn:hover,
+.nav-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+/* Search */
+.search-container {
+    flex: 1;
+    max-width: 260px;
+    position: relative;
+}
+.search-input {
+    width: 100%;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: border-color var(--transition-duration) ease, background-color var(--transition-duration) ease;
+}
+.search-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: #fff;
+}
+
+/* ==== Calendar Grid ==== */
+.calendar {
+    flex: 1;
+    display: grid;
+    gap: 1px;
+    background: var(--border-color);
+    padding: 1rem;
+}
+
+/* View specific grid definitions – JS should toggle these classes */
+.calendar.year-view   { grid-template-columns: repeat(4, 1fr); }
+.calendar.month-view  { grid-template-columns: repeat(7, 1fr); }
+.calendar.week-view   { grid-template-columns: repeat(7, 1fr); }
+.calendar.day-view    { grid-template-columns: 1fr; }
+
+/* Individual day cells */
+.day-cell {
+    background: var(--bg-surface);
+    min-height: 100px;
+    padding: 0.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: relative;
+    overflow: hidden;
+    transition: background-color var(--transition-duration) ease;
+}
+.day-cell:hover {
+    background: var(--bg-page);
+}
+
+/* Date label inside each cell */
+.day-cell .date-label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-secondary);
+}
+
+/* Event items */
+.event-item {
+    background: var(--event-bg);
+    color: var(--text-primary);
+    padding: 0.25rem 0.4rem;
+    margin-top: 0.2rem;
+    border-left: 4px solid var(--color-primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease, transform var(--transition-duration) ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.event-item:hover {
+    background: var(--event-hover-bg);
+    transform: translateY(-1px);
+}
+
+/* Holiday highlight */
+.holiday {
+    background: var(--holiday-bg);
+    color: var(--holiday-text);
+}
+
+/* ==== Modal Dialog ==== */
+.modal {
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 480px;
+    width: 90%;
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-md);
+    animation: fadeIn var(--transition-duration) ease forwards;
+    transition: opacity var(--transition-duration) ease;
+}
+.modal::backdrop {
+    background: var(--bg-overlay);
+    transition: background var(--transition-duration) ease;
+}
+
+/* Modal content */
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem;
+}
+.modal-title {
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    color: var(--color-primary);
+}
+
+/* Form elements */
+.modal-content label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.modal-content input,
+.modal-content textarea {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: border-color var(--transition-duration) ease, background-color var(--transition-duration) ease;
+}
+.modal-content input:focus,
+.modal-content textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: #fff;
+}
+
+/* Modal actions */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.modal-btn {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease;
+}
+.save-btn {
+    background: var(--color-primary);
+    color: #fff;
+}
+.save-btn:hover {
+    background: var(--color-primary-hover);
+}
+.cancel-btn {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+.cancel-btn:hover {
+    background: var(--text-secondary);
+    color: #fff;
+}
+.delete-btn {
+    background: #dc2626;
+    color: #fff;
+}
+.delete-btn:hover {
+    background: #b91c1c;
+}
+
+/* ==== Footer ==== */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-color);
+}
+
+/* ==== Responsive Adjustments ==== */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .view-controls,
+    .nav-arrows {
+        justify-content: center;
+    }
+    .search-container {
+        max-width: 100%;
+    }
+    .calendar {
+        padding: 0.5rem;
+    }
+}
+
+/* Mobile – collapse toolbar into hamburger */
+@media (max-width: 600px) {
+    .view-controls,
+    .nav-arrows {
+        display: none;
+    }
+    .toolbar::before {
+        content: "☰";
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-primary);
+        margin-right: auto;
+    }
+}
+
+/* ==== Animations ==== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==== Utility Classes ==== */
+.hidden {
+    display: none !important;
+}
+
+/* ==== Transition for Theme Switching ==== */
+html,
+body,
+* {
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, border-color var(--transition-duration) ease;
+}

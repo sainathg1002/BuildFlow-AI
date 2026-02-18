@@ -1,0 +1,95 @@
+:root {
+  --primary-color: #2563eb;
+  --secondary-color: #e2e8f0;
+  --background-color: #f8fafc;
+  --border-radius: 12px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --clock-size: clamp(200px, 40vw, 350px);
+  --hand-transition: transform 0.4s cubic-bezier(0.4, 2.3, 0.3, 1);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Layout */
+.clock-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--background-color);
+  font-family: var(--font-family);
+}
+
+/* Clock Face */
+.clock-face {
+  position: relative;
+  width: var(--clock-size);
+  height: var(--clock-size);
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+  border: 4px solid var(--secondary-color);
+}
+
+/* Common Hand Styles */
+.clock-hand {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  transform-origin: bottom center;
+  transition: var(--hand-transition);
+  background: var(--primary-color);
+}
+
+/* Hour Hand */
+.hour-hand {
+  width: 6px;
+  height: 25%;
+  border-radius: 3px;
+  background: var(--primary-color);
+}
+
+/* Minute Hand */
+.minute-hand {
+  width: 4px;
+  height: 35%;
+  border-radius: 2px;
+  background: var(--primary-color);
+}
+
+/* Second Hand */
+.second-hand {
+  width: 2px;
+  height: 45%;
+  border-radius: 1px;
+  background: #ff5252;
+}
+
+/* Center Pivot */
+.clock-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px #fff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  :root {
+    --clock-size: clamp(150px, 70vw, 250px);
+  }
+}
+
+/* Hover Effects (optional for SaaS feel) */
+.clock-face:hover .clock-hand {
+  filter: brightness(1.1);
+}
+
+/* Smooth Rotation Example (to be toggled via JS) */
+.clock-hand.rotate {
+  transform: rotate(var(--hand-angle, 0deg));
+}

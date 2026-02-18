@@ -1,4 +1,5 @@
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import time
 from hashlib import sha256
@@ -79,13 +80,13 @@ def _build_project_response(project_folder: str):
         return None
 
     zip_path = f"{project_folder}.zip"
-    shutil.make_archive(project_folder.replace(".zip", ""), "zip", project_folder)
+    shutil.make_archive(project_folder, "zip", project_folder)
 
-    project_name = os.path.basename(project_folder)
-    app_url = f"/workspaces/{project_name}/index.html"
+    project_id = os.path.basename(project_folder)
+    app_url = f"/workspaces/{project_id}/index.html"
 
     return {
-        "download": zip_path.replace("\\", "/"),
+        "download": f"/workspaces/{project_id}.zip",
         "project": project_folder,
         "app_url": app_url,
     }
@@ -181,12 +182,16 @@ def generate_project(request: Request, req: AgentRequest):
             )
         }
 
+    project_id = uuid.uuid4().hex[:12]
+    project_folder = os.path.join(WORKSPACES_DIR, project_id)
+    os.makedirs(project_folder, exist_ok=True)
+
     timeout_seconds = int(os.getenv("GENERATION_TIMEOUT_SECONDS", "180"))
     request_started = time.time()
     executor = ThreadPoolExecutor(max_workers=1)
     future = executor.submit(
         agent.invoke,
-        {"user_prompt": req.prompt},
+        {"user_prompt": req.prompt, "project_id": project_id},
         {"recursion_limit": req.recursion_limit}
     )
 
@@ -208,16 +213,7 @@ def generate_project(request: Request, req: AgentRequest):
         created_files = getattr(coder_state, "created_files", []) if coder_state else []
         failed_files = getattr(coder_state, "failed_files", []) if coder_state else []
 
-        project_candidates = []
-        project_candidates.append(os.path.dirname(plan.files[0].path))
-        if created_files:
-            project_candidates.append(os.path.dirname(created_files[0]))
-
-        project_response = None
-        for project_folder in project_candidates:
-            project_response = _build_project_response(project_folder)
-            if project_response:
-                break
+        project_response = _build_project_response(project_folder)
 
         if not project_response:
             latest_workspace = _find_latest_workspace(request_started)
