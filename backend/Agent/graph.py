@@ -13,7 +13,7 @@ from langgraph.graph import StateGraph
 
 load_dotenv()
 
-MODEL_NAME = "llama3-8b-8192"
+MODEL_NAME = "openai/gpt-oss-120b"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 _MAX_CODER_WORKERS = max(1, int(os.getenv("CODER_MAX_WORKERS", "1")))
 _MAX_DEPENDENCY_CHARS = max(500, int(os.getenv("CODER_DEP_CONTEXT_CHARS", "3500")))
