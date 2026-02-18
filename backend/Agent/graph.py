@@ -43,6 +43,11 @@ def _require_llm() -> ChatGroq:
     return llm
 
 
+def get_llm_status() -> tuple[bool, str, str]:
+    """Expose LLM readiness for API pre-checks."""
+    return llm is not None, MODEL_NAME, _LLM_INIT_ERROR
+
+
 def planner_agent(state: dict) -> dict:
     """Converts user prompt into a structured Plan."""
     user_prompt = state["user_prompt"]
