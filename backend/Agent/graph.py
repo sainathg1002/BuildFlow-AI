@@ -5,16 +5,15 @@ from langchain_core.globals import set_debug, set_verbose
 from langchain_groq.chat_models import ChatGroq
 from langgraph.constants import END
 from langgraph.graph import StateGraph
-from langgraph.prebuilt import create_react_agent
 
 try:
     from backend.Agent.prompts import architect_prompt, coder_system_prompt, planner_prompt
     from backend.Agent.states import CoderState, Plan, TaskPlan
-    from backend.Agent.tools import get_current_directory, list_files, read_file, write_file
+    from backend.Agent.tools import write_file
 except ModuleNotFoundError:
     from Agent.prompts import architect_prompt, coder_system_prompt, planner_prompt
     from Agent.states import CoderState, Plan, TaskPlan
-    from Agent.tools import get_current_directory, list_files, read_file, write_file
+    from Agent.tools import write_file
 
 _ = load_dotenv()
 set_debug(True)
@@ -74,39 +73,41 @@ def architect_agent(state: dict) -> dict:
 
 
 def coder_agent(state: dict) -> dict:
-    """LangGraph tool-using coder agent."""
     coder_state: CoderState = state.get("coder_state")
     if coder_state is None:
         coder_state = CoderState(task_plan=state["task_plan"], current_step_idx=0)
 
     steps = coder_state.task_plan.implementation_steps
+
     if coder_state.current_step_idx >= len(steps):
         return {"coder_state": coder_state, "status": "DONE"}
 
     current_task = steps[coder_state.current_step_idx]
-    existing_content = read_file.invoke({"path": current_task.filepath})
+
+    llm_instance = _require_llm()
 
     system_prompt = coder_system_prompt()
-    user_prompt = (
-        f"Task: {current_task.task_description}\n"
-        f"File: {current_task.filepath}\n"
-        f"Existing content:\n{existing_content}\n"
-        "Use write_file(path, content) to save your changes."
+    user_prompt = f"""
+Task Description:
+{current_task.task_description}
+
+Return ONLY the complete file content.
+No markdown.
+No explanation.
+"""
+
+    response = llm_instance.invoke(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
     )
 
-    coder_tools = [read_file, write_file, list_files, get_current_directory]
-    react_agent = create_react_agent(_require_llm(), coder_tools)
-    react_agent.invoke(
-        {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ]
-        }
-    )
+    write_file.invoke({"path": current_task.filepath, "content": response.content})
 
     coder_state.current_step_idx += 1
     status = "DONE" if coder_state.current_step_idx >= len(steps) else "RUNNING"
+
     return {"coder_state": coder_state, "status": status}
 
 
@@ -129,6 +130,6 @@ agent = graph.compile()
 if __name__ == "__main__":
     result = agent.invoke(
         {"user_prompt": "Build a colourful modern todo app in html css and js"},
-        {"recursion_limit": 100},
+        {"recursion_limit": 15},
     )
     print("Final State:", result)
