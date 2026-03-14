@@ -9,6 +9,8 @@
 
 ---
 
+---
+
 ## What Is This?
 
 Coder App is an **autonomous AI agent** that generates complete application code from a plain English description.
@@ -193,4 +195,4 @@ docker run -p 8501:8501 --env-file .env coder-app
 ## Author
 
 **Venkata Sainath Ganta**
-[GitHub](https://github.com/yourusername) • [LinkedIn](https://linkedin.com/in/yourprofile) • [Portfolio](https://yourportfolio.com)
+[GitHub](https://github.com/sainathg1002) • [LinkedIn](https://www.linkedin.com/in/venkata-sai-ganta-c300b200a100/) • [Portfolio](https://sainathg1002.github.io/sainath_portfolio/)
